@@ -1,0 +1,45 @@
+@page "/login"
+@using System.Net
+@inject IHttpClientFactory Factory
+@inject Blazored.SessionStorage.ISessionStorageService SessionStorage
+@inject NavigationManager Navigation
+
+<h3>Connexion</h3>
+
+<input @bind="login" class="form-control" placeholder="Login (ex : user1)" />
+
+<button class="btn btn-primary mt-2" @onclick="SeConnecter">Se connecter</button>
+
+@if (!string.IsNullOrEmpty(message))
+{
+    <p class="text-danger mt-2">@message</p>
+}
+
+@code
+{
+    // Login saisi par l'utilisateur
+    private string login = "";
+    // Message d'erreur affiché sous le bouton
+    private string message = "";
+
+    // Demande un token à AuthentificationApi
+    private async Task SeConnecter()
+    {
+        var client = Factory.CreateClient("AuthApi");
+        var reponse = await client.PostAsync($"api/Authentication?login={login}", null);
+
+        // Login inconnu
+        if (reponse.StatusCode == HttpStatusCode.NotFound)
+        {
+            message = "L'utilisateur n'existe pas";
+            return;
+        }
+
+        // Token reçu : on le garde en session (point 7)
+        var token = await reponse.Content.ReadAsStringAsync();
+        await SessionStorage.SetItemAsync("jwtToken", token);
+
+        // Retour à l'accueil (point 7)
+        Navigation.NavigateTo("/");
+    }
+}

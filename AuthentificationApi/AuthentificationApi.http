@@ -1,0 +1,7 @@
+@AuthentificationApi_HostAddress = http://localhost:5100
+
+### Demande un token pour user1 (Admin)
+POST {{AuthentificationApi_HostAddress}}/api/Authentication?login=user1
+
+### Utilisateur inconnu (404)
+POST {{AuthentificationApi_HostAddress}}/api/Authentication?login=toto

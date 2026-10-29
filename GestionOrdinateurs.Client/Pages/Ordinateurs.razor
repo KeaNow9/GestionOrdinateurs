@@ -1,0 +1,65 @@
+@page "/ordinateurs"
+@using GestionOrdinateurs.Shared
+@inject IHttpClientFactory Factory
+
+<PageTitle>Ordinateurs</PageTitle>
+
+<h3>Liste des ordinateurs</h3>
+
+@if (!string.IsNullOrEmpty(message))
+{
+    <p class="text-danger">@message</p>
+}
+else if (ordinateurs == null)
+{
+    <p><em>Chargement...</em></p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Nom</th>
+                <th>Prix</th>
+                <th>Devise</th>
+                <th>Vendu</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var ordinateur in ordinateurs)
+            {
+                <tr>
+                    <td>@ordinateur.Nom</td>
+                    <td>@ordinateur.Prix.ToString("0.00")</td>
+                    <td>@devise</td>
+                    <td>@(ordinateur.Vendu ? "Oui" : "Non")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code
+{
+    // Ordinateurs reçus de l'API
+    private List<Ordinateur>? ordinateurs;
+    // Message d'erreur si l'appel échoue
+    private string message = "";
+    // Devise des prix
+    private const string devise = "€";
+
+    // Charge la liste au chargement de la page
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var client = Factory.CreateClient("ApiGestionOrdinateurs");
+            ordinateurs = await client.GetFromJsonAsync<List<Ordinateur>>("Ordinateurs");
+        }
+        catch (HttpRequestException)
+        {
+            // Pas de token ou token expiré (401)
+            message = "Connectez-vous pour voir les ordinateurs";
+        }
+    }
+}

@@ -1,0 +1,63 @@
+@page "/historique-reparations"
+@using GestionOrdinateurs.Shared
+@inject IHttpClientFactory Factory
+
+<PageTitle>Historique des réparations</PageTitle>
+
+<h3>Historique des réparations</h3>
+
+@if (!string.IsNullOrEmpty(message))
+{
+    <p class="text-danger">@message</p>
+}
+else if (historique == null)
+{
+    <p><em>Chargement...</em></p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Ordinateur</th>
+                <th>Technicien</th>
+                <th>Type de réparation</th>
+                <th>Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var ligne in historique)
+            {
+                <tr>
+                    <td>@ligne.NomOrdinateur</td>
+                    <td>@ligne.Technicien</td>
+                    <td>@ligne.TypeReparation</td>
+                    <td>@ligne.DateIntervention.ToString("dd/MM/yyyy HH:mm")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code
+{
+    // Lignes de l'historique reçues de l'API
+    private List<HistoriqueReparationRecord>? historique;
+    // Message d'erreur si l'appel échoue
+    private string message = "";
+
+    // Charge l'historique au chargement de la page
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var client = Factory.CreateClient("ApiGestionOrdinateurs");
+            historique = await client.GetFromJsonAsync<List<HistoriqueReparationRecord>>("Reparations/historique");
+        }
+        catch (HttpRequestException)
+        {
+            // Pas de token ou token expiré (401)
+            message = "Connectez-vous pour voir l'historique";
+        }
+    }
+}
