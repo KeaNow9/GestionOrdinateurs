@@ -43,9 +43,9 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// Configuration JWT avec la même clé que AuthentificationApi
-var jwtKey = builder.Configuration["Jwt:Key"] ?? "";
-var key = Encoding.ASCII.GetBytes(jwtKey);
+// Ancienne configuration JWT avec la même clé que AuthentificationApi (TP5)
+// var jwtKey = builder.Configuration["Jwt:Key"] ?? "";
+// var key = Encoding.ASCII.GetBytes(jwtKey);
 
 builder.Services.AddAuthentication(options =>
 {
@@ -55,13 +55,39 @@ builder.Services.AddAuthentication(options =>
 {
     options.RequireHttpsMetadata = false;
     options.SaveToken = true;
-    // Vérifie seulement la signature du token
+    // Ancienne vérification avec la clé de AuthentificationApi (TP5)
+    // options.TokenValidationParameters = new TokenValidationParameters
+    // {
+    //     ValidateIssuerSigningKey = true,
+    //     IssuerSigningKey = new SymmetricSecurityKey(key),
+    //     ValidateIssuer = false,
+    //     ValidateAudience = false
+    // };
+
+    // Vérification des tokens Keycloak
     options.TokenValidationParameters = new TokenValidationParameters
     {
+        // Le token doit venir du realm Keycloak
+        ValidateIssuer = true,
+        ValidIssuer = builder.Configuration["Keycloak:Issuer"],
+
+        // Le token doit être destiné à "account"
+        ValidateAudience = true,
+        ValidAudience = "account",
+
         ValidateIssuerSigningKey = true,
-        IssuerSigningKey = new SymmetricSecurityKey(key),
-        ValidateIssuer = false,
-        ValidateAudience = false
+        ValidateLifetime = false,
+
+        // Récupère les clés publiques de Keycloak pour vérifier la signature
+        IssuerSigningKeyResolver = (token, securityToken, kid, parameters) =>
+        {
+            var client = new HttpClient();
+            var keyUri = $"{builder.Configuration["Keycloak:BaseUrl"]}/realms/{builder.Configuration["Keycloak:Realm"]}/protocol/openid-connect/certs";
+            var response = client.GetAsync(keyUri).Result;
+            var keys = new JsonWebKeySet(response.Content.ReadAsStringAsync().Result);
+
+            return keys.GetSigningKeys();
+        }
     };
     // Affiche dans la console si le token est valide ou non
     options.Events = new JwtBearerEvents

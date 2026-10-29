@@ -2,6 +2,8 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Security.Claims;
 using System.Text;
+using AuthentificationApi.Models;
+using AuthentificationApi.Services;
 using GestionOrdinateurs.Shared;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
@@ -17,12 +19,15 @@ public class AuthenticationController : ControllerBase
     private readonly IHttpClientFactory _httpClientFactory;
     // Permet de lire appsettings.json (clé JWT)
     private readonly IConfiguration _configuration;
+    // Service qui demande les tokens à Keycloak
+    private readonly KeycloakAuthService _keycloakAuthService;
 
     // Les services sont fournis par l'injection de dépendances
-    public AuthenticationController(IHttpClientFactory httpClientFactory, IConfiguration configuration)
+    public AuthenticationController(IHttpClientFactory httpClientFactory, IConfiguration configuration, KeycloakAuthService keycloakAuthService)
     {
         _httpClientFactory = httpClientFactory;
         _configuration = configuration;
+        _keycloakAuthService = keycloakAuthService;
     }
 
     // Génère un token JWT à partir du login de l'utilisateur
@@ -47,6 +52,22 @@ public class AuthenticationController : ControllerBase
 
         // Renvoie le token seul (comme dans la démo du cours)
         return Ok(CreerToken(user));
+    }
+
+    // Demande un token à Keycloak avec le login et le mot de passe
+    [HttpPost("login")]
+    public async Task<IActionResult> Login([FromBody] LoginRequest request)
+    {
+        try
+        {
+            var token = await _keycloakAuthService.LoginAsync(request.Username, request.Password);
+            return Ok(token);
+        }
+        catch (Exception ex)
+        {
+            // Login ou mot de passe incorrect
+            return Unauthorized(ex.Message);
+        }
     }
 
     // Crée le token avec le login et le rôle de l'utilisateur valable 15 minutes

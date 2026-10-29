@@ -1,5 +1,6 @@
 @page "/login"
 @using System.Net
+@using System.Text.Json
 @inject IHttpClientFactory Factory
 @inject Blazored.SessionStorage.ISessionStorageService SessionStorage
 @inject NavigationManager Navigation
@@ -7,6 +8,8 @@
 <h3>Connexion</h3>
 
 <input @bind="login" class="form-control" placeholder="Login (ex : user1)" />
+
+<input @bind="motDePasse" type="password" class="form-control mt-2" placeholder="Mot de passe" />
 
 <button class="btn btn-primary mt-2" @onclick="SeConnecter">Se connecter</button>
 
@@ -19,27 +22,53 @@
 {
     // Login saisi par l'utilisateur
     private string login = "";
+    // Mot de passe saisi par l'utilisateur
+    private string motDePasse = "";
     // Message d'erreur affiché sous le bouton
     private string message = "";
 
-    // Demande un token à AuthentificationApi
+    // Ancienne connexion sans mot de passe (TP5)
+    // private async Task SeConnecter()
+    // {
+    //     var client = Factory.CreateClient("AuthApi");
+    //     var reponse = await client.PostAsync($"api/Authentication?login={login}", null);
+    //
+    //     // Login inconnu
+    //     if (reponse.StatusCode == HttpStatusCode.NotFound)
+    //     {
+    //         message = "L'utilisateur n'existe pas";
+    //         return;
+    //     }
+    //
+    //     // Token reçu : on le garde en session (point 7)
+    //     var token = await reponse.Content.ReadAsStringAsync();
+    //     await SessionStorage.SetItemAsync("jwtToken", token);
+    //
+    //     // Retour à l'accueil (point 7)
+    //     Navigation.NavigateTo("/");
+    // }
+
+    // Demande un token à Keycloak en passant par AuthentificationApi
     private async Task SeConnecter()
     {
         var client = Factory.CreateClient("AuthApi");
-        var reponse = await client.PostAsync($"api/Authentication?login={login}", null);
+        var reponse = await client.PostAsJsonAsync("api/Authentication/login", new { Username = login, Password = motDePasse });
 
-        // Login inconnu
-        if (reponse.StatusCode == HttpStatusCode.NotFound)
+        // Login ou mot de passe incorrect
+        if (reponse.StatusCode == HttpStatusCode.Unauthorized)
         {
-            message = "L'utilisateur n'existe pas";
+            message = "Login ou mot de passe incorrect";
             return;
         }
 
-        // Token reçu : on le garde en session (point 7)
-        var token = await reponse.Content.ReadAsStringAsync();
+        // Lecture du token dans la réponse de Keycloak
+        var resultat = await reponse.Content.ReadFromJsonAsync<JsonElement>();
+        var token = resultat.GetProperty("access_token").GetString();
+
+        // Token reçu : on le garde en session
         await SessionStorage.SetItemAsync("jwtToken", token);
 
-        // Retour à l'accueil (point 7)
+        // Retour à l'accueil
         Navigation.NavigateTo("/");
     }
 }

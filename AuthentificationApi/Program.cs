@@ -1,3 +1,5 @@
+using AuthentificationApi.Services;
+
 // Création de l'application web
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,6 +11,10 @@ builder.Services.AddHttpClient("ApiGestionOrdinateurs", client =>
 {
     client.BaseAddress = new Uri(builder.Configuration["ApiGestionOrdinateurs:Url"] ?? "");
 });
+
+// Client HTTP et service pour demander les tokens à Keycloak
+builder.Services.AddHttpClient();
+builder.Services.AddScoped<KeycloakAuthService>();
 
 // Ajout de Swagger pour tester l'API
 builder.Services.AddEndpointsApiExplorer();
