@@ -19,7 +19,7 @@ builder.Services.AddBlazoredSessionStorage();
 // Client HTTP vers l'API d'authentification (HttpClientFactory)
 builder.Services.AddHttpClient("AuthApi", client =>
 {
-    client.BaseAddress = new Uri("http://localhost:5100/");
+    client.BaseAddress = new Uri("http://localhost:5157/");
 });
 
 // Handler qui ajoute le token JWT aux requêtes

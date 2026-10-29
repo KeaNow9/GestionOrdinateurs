@@ -1,5 +1,6 @@
 services:
 
+  # Base de données postgres
   postgres:
     image: postgres:15
     container_name: postgres_db
@@ -14,6 +15,7 @@ services:
     networks:
       - appnet
 
+  # Serveur d'authentification keycloak
   keycloak:
     image: quay.io/keycloak/keycloak:26.8.1
     container_name: keycloak
@@ -34,6 +36,7 @@ services:
     networks:
       - appnet
 
+  # API qui génère les tokens JWT
   authentification-api:
     image: ${DOCKER_ACCOUNT}/authentificationapi:latest
     build:
@@ -51,3 +54,58 @@ services:
     networks:
       - appnet
 
+  # API des ordinateurs (base SQLite)
+  gestionordinateurs-api:
+    image: ${DOCKER_ACCOUNT}/gestionordinateurs-api:latest
+    build:
+      context: .
+      dockerfile: GestionOrdinateurs.API/Dockerfile
+    container_name: gestionordinateurs_api
+    ports:
+      - "5046:5046"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:5046
+    networks:
+      - appnet
+
+  # Gateway YARP vers l'API
+  gestionordinateurs-gateway:
+    image: ${DOCKER_ACCOUNT}/gestionordinateurs-gateway:latest
+    build:
+      context: .
+      dockerfile: GestionOrdinateurs.Gateway/Dockerfile
+    container_name: gestionordinateurs_gateway
+    ports:
+      - "5010:5010"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:5010
+    depends_on:
+      - gestionordinateurs-api
+    networks:
+      - appnet
+
+  # Front Blazor servi par nginx
+  gestionordinateurs-client:
+    image: ${DOCKER_ACCOUNT}/gestionordinateurs-client:latest
+    build:
+      context: .
+      dockerfile: GestionOrdinateurs.Client/Dockerfile
+    container_name: gestionordinateurs_client
+    ports:
+      - "5000:5000"
+    depends_on:
+      - gestionordinateurs-gateway
+      - authentification-api
+    networks:
+      - appnet
+
+# Stockage des données de postgres et keycloak
+volumes:
+  postgres_data:
+  keycloak_data:
+
+# Réseau commun pour que les conteneurs se parlent
+networks:
+  appnet:
